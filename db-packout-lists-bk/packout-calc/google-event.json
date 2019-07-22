@@ -1,0 +1,56 @@
+{
+    "status": "confirmed",
+        "kind": "calendar#event",
+            "end": {
+        "dateTime": "2019-07-22T13:00:00-07:00"
+    },
+    "description": "Open house for relaunch of plumbing supply store\n\nDough Count: 60 (invoiced for 50) + 2 GF\n\nMenu: Buffet Style\nCheese, Pepp, Marg, Meat Lovers, BBQ Chick\n\nArrival/Load In: 10:30\nServing: 11:00 AM - 1:00 PM\n\nCrew:\n1.\n2. \n\nAttire DB Swag\n\nPOC: DOMINICK SUMMA - 714-317-6301",
+        "created": "2019-07-08T20:52:11.000Z",
+            "iCalUID": "6e9e1npc9lrslnp3l2jd88bad8@google.com",
+                "reminders": {
+        "useDefault": true
+    },
+    "htmlLink": "https://www.google.com/calendar/event?eid=NmU5ZTFucGM5bHJzbG5wM2wyamQ4OGJhZDggZGFuZ2Jyb3RoZXJwaXp6YUBt",
+        "sequence": 0,
+            "updated": "2019-07-16T20:00:17.619Z",
+                "summary": "Inv. #1780  Dominick Summa      ",
+                    "start": {
+        "dateTime": "2019-07-22T11:00:00-07:00"
+    },
+    "guestsCanModify": true,
+        "etag": "\"3126614435238000\"",
+            "location": "4533 MISSION GORGE PL (plumbing supply)",
+                "attendees": [
+                    {
+                        "email": "markspenla9@gmail.com",
+                        "responseStatus": "needsAction"
+                    },
+                    {
+                        "email": "kschrief10@gmail.com",
+                        "responseStatus": "needsAction"
+                    },
+                    {
+                        "responseStatus": "accepted",
+                        "organizer": true,
+                        "email": "dangbrotherpizza@gmail.com",
+                        "self": true
+                    },
+                    {
+                        "email": "brett.adams1990@gmail.com",
+                        "responseStatus": "needsAction"
+                    },
+                    {
+                        "email": "kevin@dangbrotherpizza.com",
+                        "responseStatus": "needsAction"
+                    }
+                ],
+                    "organizer": {
+        "self": true,
+            "email": "dangbrotherpizza@gmail.com"
+    },
+    "creator": {
+        "self": true,
+            "email": "dangbrotherpizza@gmail.com"
+    },
+    "id": "6e9e1npc9lrslnp3l2jd88bad8"
+}
