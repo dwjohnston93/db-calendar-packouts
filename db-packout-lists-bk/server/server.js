@@ -7,6 +7,10 @@
 
 var loopback = require('loopback');
 var boot = require('loopback-boot');
+const path = require('path');
+const fs = require('fs');
+const authenticate = require('./authenticate');
+
 
 var app = module.exports = loopback();
 
@@ -27,6 +31,11 @@ app.start = function() {
 // Sub-apps like REST API are mounted via boot scripts.
 boot(app, __dirname, function(err) {
   if (err) throw err;
+
+  // this middleware is invoked in the "routes" phase
+  app.get('/authenticate', function(req, res, next) {
+    res.redirect(authenticate.authUrl)
+  })
 
   // start the server if `$ node server.js`
   if (require.main === module)
