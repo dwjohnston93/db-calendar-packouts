@@ -9,7 +9,6 @@ const plus = google.plus('v1');
  */
 const keyPath = path.join(__dirname, 'credentials.json');
 let keys = {redirect_uris: ['']};
-console.log(fs.existsSync(keyPath))
 if (fs.existsSync(keyPath)) {
   keys = require(keyPath).web;
 }
@@ -37,8 +36,6 @@ const connectionUrl = oAuth2Client.generateAuthUrl({
   access_type: 'offline',
   scope: DEFAULT_SCOPE
 })
-
-console.log("connectionUrl:", connectionUrl)
 
 module.exports = {
   authUrl: connectionUrl

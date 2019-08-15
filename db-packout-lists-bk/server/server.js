@@ -10,7 +10,8 @@ var boot = require('loopback-boot');
 const path = require('path');
 const fs = require('fs');
 const authenticate = require('./authenticate');
-
+const queryString = require('query-string');
+const url = require('url');
 
 var app = module.exports = loopback();
 
@@ -34,7 +35,15 @@ boot(app, __dirname, function(err) {
 
   // this middleware is invoked in the "routes" phase
   app.get('/authenticate', function(req, res, next) {
+    console.log("hit auth1")
     res.redirect(authenticate.authUrl)
+  })
+
+  app.all('/oauth2', function(req, res, next){
+    const qs = new url.URL(req.url, 'http://localhost:3000').searchParams;
+    const {tokens} = oauth2Client.getToken(qs.get('code'));
+    oauth2Client.credentials = tokens; // eslint-disable-line require-atomic-updates
+    resolve(oauth2Client);
   })
 
   // start the server if `$ node server.js`
