@@ -10,7 +10,6 @@ var boot = require('loopback-boot');
 const path = require('path');
 const fs = require('fs');
 const {google} = require('googleapis');
-const authenticate = require('./authenticate');
 const url = require('url');
 
 var app = module.exports = loopback();
@@ -28,10 +27,7 @@ app.start = function() {
   });
 };
 
-
-/**
- * To use OAuth2 authentication, we need access to a a CLIENT_ID, CLIENT_SECRET, AND REDIRECT_URI.  To get these credentials for your application, visit https://console.cloud.google.com/apis/credentials.
- */
+//To use OAuth2 authentication, we need access to a a CLIENT_ID, CLIENT_SECRET, AND REDIRECT_URI
 const keyPath = path.join(__dirname, 'credentials.json');
 let keys = {redirect_uris: ['']};
 if (fs.existsSync(keyPath)) {
@@ -89,21 +85,29 @@ boot(app, __dirname, function(err) {
   // this middleware is invoked in the "routes" phase
   app.get('/authenticate', function(req, res, next) {
     console.log("hit /auth")
-    res.redirect(connectionUrl)
+    // Check if we have previously stored a token.
+    fs.readFile(TOKEN_PATH, (err, token) => {
+      if (err) return res.redirect(connectionUrl);
+      let returnUser = new Promise((resolve, reject) => {
+        resolve(oAuth2Client.setCredentials(JSON.parse(token)))
+        console.log("oAuth2Client:", oAuth2Client);
+      })
+      returnUser.then(res.redirect('http://localhost:8080'))
+    });
   })
 
   app.get('/oauth2', function(req, res, next){
     console.log("hit /oauth2")
+    if (req.url.indexOf('/oauth2') > -1) return getToken()
     async function getToken(){
+      console.log("getToken hit")
       const qs = new url.URL(req.url, 'http://localhost:3000').searchParams.get('code');
       let tokenPromise = new Promise((resolve, reject) => {
         tokenExchange(qs);
+        console.log("tokenExchange hit")
         resolve(res.redirect('http://localhost:8080'))
       })
       let redirect = await tokenPromise 
-    }
-    if (req.url.indexOf('/oauth2') > -1) {
-      getToken()
     }
   })
 
