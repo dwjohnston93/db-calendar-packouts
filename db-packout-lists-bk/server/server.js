@@ -9,8 +9,8 @@ var loopback = require('loopback');
 var boot = require('loopback-boot');
 const path = require('path');
 const fs = require('fs');
+const {google} = require('googleapis');
 const authenticate = require('./authenticate');
-const queryString = require('query-string');
 const url = require('url');
 
 var app = module.exports = loopback();
@@ -28,6 +28,59 @@ app.start = function() {
   });
 };
 
+
+/**
+ * To use OAuth2 authentication, we need access to a a CLIENT_ID, CLIENT_SECRET, AND REDIRECT_URI.  To get these credentials for your application, visit https://console.cloud.google.com/apis/credentials.
+ */
+const keyPath = path.join(__dirname, 'credentials.json');
+let keys = {redirect_uris: ['']};
+if (fs.existsSync(keyPath)) {
+  keys = require(keyPath).web;
+}
+
+/**
+ * Create a new OAuth2 client with the configured keys.
+ */
+const oAuth2Client = new google.auth.OAuth2(
+  keys.client_id,
+  keys.client_secret,
+  keys.redirect_uris[0],
+);
+
+/**
+ * This scope tells google what information we want to request.
+ */
+const DEFAULT_SCOPE = [
+  'https://www.googleapis.com/auth/calendar.events.readonly'
+];
+
+/**
+ * Get a url which will open the google sign-in page and request access to the scope provided (such as calendar events).
+ */
+const connectionUrl = oAuth2Client.generateAuthUrl({
+  access_type: 'offline',
+  scope: DEFAULT_SCOPE
+})
+
+// The file token.json stores the user's access and refresh tokens, and is
+// created automatically when the authorization flow completes for the first
+// time.
+const TOKEN_PATH = 'token.json';
+
+async function tokenExchange(code){
+  const {tokens} = await oAuth2Client.getToken(code)
+  console.log("tokens:", tokens)
+  oAuth2Client.setCredentials(tokens)
+  // Store the token to disk for later program executions
+  console.log("TOKEN_PATH:", TOKEN_PATH)
+  fs.writeFile(TOKEN_PATH, JSON.stringify(tokens), (err) => {
+    console.log("JSON.stringify(tokens:", JSON.stringify(tokens))
+    console.log("FS HIT!!!!!")
+    if (err) return console.error(err);
+    console.log('Token stored to', TOKEN_PATH);
+  });
+}
+
 // Bootstrap the application, configure models, datasources and middleware.
 // Sub-apps like REST API are mounted via boot scripts.
 boot(app, __dirname, function(err) {
@@ -35,15 +88,23 @@ boot(app, __dirname, function(err) {
 
   // this middleware is invoked in the "routes" phase
   app.get('/authenticate', function(req, res, next) {
-    console.log("hit auth1")
-    res.redirect(authenticate.authUrl)
+    console.log("hit /auth")
+    res.redirect(connectionUrl)
   })
 
-  app.all('/oauth2', function(req, res, next){
-    const qs = new url.URL(req.url, 'http://localhost:3000').searchParams;
-    const {tokens} = oauth2Client.getToken(qs.get('code'));
-    oauth2Client.credentials = tokens; // eslint-disable-line require-atomic-updates
-    resolve(oauth2Client);
+  app.get('/oauth2', function(req, res, next){
+    console.log("hit /oauth2")
+    async function getToken(){
+      const qs = new url.URL(req.url, 'http://localhost:3000').searchParams.get('code');
+      let tokenPromise = new Promise((resolve, reject) => {
+        tokenExchange(qs);
+        resolve(res.redirect('http://localhost:8080'))
+      })
+      let redirect = await tokenPromise 
+    }
+    if (req.url.indexOf('/oauth2') > -1) {
+      getToken()
+    }
   })
 
   // start the server if `$ node server.js`
