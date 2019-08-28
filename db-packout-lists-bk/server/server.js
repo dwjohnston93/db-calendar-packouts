@@ -11,6 +11,7 @@ const path = require('path');
 const fs = require('fs');
 const {google} = require('googleapis');
 const url = require('url');
+var qs = require('querystring');
 
 var app = module.exports = loopback();
 
@@ -109,6 +110,24 @@ boot(app, __dirname, function(err) {
       })
       let redirect = await tokenPromise 
     }
+  })
+
+  app.post('/event', function(req, res, next){  
+    var body = ''
+    req.on('data', function (data) {
+      console.log("data:", data)
+      body += data;
+
+      // Too much POST data, kill the connection!
+      // 1e6 === 1 * Math.pow(10, 6) === 1 * 1000000 ~~~ 1MB
+      if (body.length > 1e6)
+          req.connection.destroy();
+    });
+
+    req.on('end', function () {
+        var post = qs.parse(body);
+        console.log("post:", post)
+    });
   })
 
   // start the server if `$ node server.js`
