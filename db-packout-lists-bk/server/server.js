@@ -12,6 +12,10 @@ const fs = require('fs');
 const {google} = require('googleapis');
 const url = require('url');
 var qs = require('querystring');
+var https = require('https');
+var fetch = require('node-fetch');
+var queryString = require('query-string');
+
 
 var app = module.exports = loopback();
 
@@ -72,7 +76,6 @@ async function tokenExchange(code){
   console.log("TOKEN_PATH:", TOKEN_PATH)
   fs.writeFile(TOKEN_PATH, JSON.stringify(tokens), (err) => {
     console.log("JSON.stringify(tokens:", JSON.stringify(tokens))
-    console.log("FS HIT!!!!!")
     if (err) return console.error(err);
     console.log('Token stored to', TOKEN_PATH);
   });
@@ -88,14 +91,29 @@ boot(app, __dirname, function(err) {
     console.log("hit /auth")
     // Check if we have previously stored a token.
     fs.readFile(TOKEN_PATH, (err, token) => {
+      //if err is thrown, redirect users to the Google auth URL
       if (err) return res.redirect(connectionUrl);
+      //otherwise have returnUser's credentials get set from saved token file
       let returnUser = new Promise((resolve, reject) => {
         resolve(oAuth2Client.setCredentials(JSON.parse(token)))
-        console.log("oAuth2Client:", oAuth2Client);
-      })
-      returnUser.then(res.redirect('http://localhost:8080'))
-    });
+        console.log("oAuth2Client:", oAuth2Client)
+        fetch('https://www.googleapis.com/oauth2/v4/token', {
+          method: 'POST',
+          headers: {'Content-Type':'application/x-www-form-urlencoded'}, // this line is important, if this content-type is not set it wont work
+          body: queryString.stringify({
+            client_id: oAuth2Client._clientId, 
+            client_secret: oAuth2Client._clientSecret,
+            refresh_token: oAuth2Client.credentials.refresh_token,
+            grant_type: "refresh_token"
+          })
+        })
+        .then(res => res.json())
+        .then(json => console.log("json from fetch:", json),
+                      oAuth2Client.setCredentials(json));
+    }) 
+    returnUser.then(res.redirect('http://localhost:8080'))
   })
+})
 
   app.get('/oauth2', function(req, res, next){
     console.log("hit /oauth2")
@@ -115,7 +133,6 @@ boot(app, __dirname, function(err) {
   app.post('/event', function(req, res, next){  
     var body = ''
     req.on('data', function (data) {
-      console.log("data:", data)
       body += data;
 
       // Too much POST data, kill the connection!
@@ -124,9 +141,30 @@ boot(app, __dirname, function(err) {
           req.connection.destroy();
     });
 
-    req.on('end', function () {
+    req.on('end', function() {
         var post = qs.parse(body);
-        console.log("post:", post)
+        console.log("******* oAuth2Client end ***:", oAuth2Client);
+
+        const calendar = google.calendar('v3');
+        console.log("########### oAuth2Client here ######### :", oAuth2Client)
+        calendar.events.get({
+          auth: oAuth2Client,
+          calendarId: "dangbrotherpizza@gmail.com",
+          eventId: post.eventID
+        }, (err, res) => {
+          if (err) return console.log(`The API returned an error: ${err}`)
+          console.log("res:", res)
+        })
+
+        // fetch(`https://www.googleapis.com/calendar/v3/calendars/dangbrotherpizza@gmail.com/events/${post.eventID}`, {
+        //   method: "get",
+        //   headers: {
+        //     Authorization: oAuth2Client.credentials.access_token
+        //   }
+        // })
+        //   .then(res => res.json())
+        //   .then(json => console.log("json.e.es:", json.error.errors));
+
     });
   })
 
