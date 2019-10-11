@@ -39,25 +39,20 @@ if (fs.existsSync(keyPath)) {
   keys = require(keyPath).web;
 }
 
-/**
- * Create a new OAuth2 client with the configured keys.
- */
+//Create a new OAuth2 client with the configured keys.
 const oAuth2Client = new google.auth.OAuth2(
   keys.client_id,
   keys.client_secret,
   keys.redirect_uris[0],
 );
 
-/**
- * This scope tells google what information we want to request.
- */
+
+//This scope tells google what information we want to request.
 const DEFAULT_SCOPE = [
   'https://www.googleapis.com/auth/calendar.events.readonly'
 ];
 
-/**
- * Get a url which will open the google sign-in page and request access to the scope provided (such as calendar events).
- */
+//Get a url which will open the google sign-in page and request access to the scope provided (such as calendar events). 
 const connectionUrl = oAuth2Client.generateAuthUrl({
   access_type: 'offline',
   scope: DEFAULT_SCOPE
@@ -70,14 +65,10 @@ const TOKEN_PATH = 'token.json';
 
 async function tokenExchange(code){
   const {tokens} = await oAuth2Client.getToken(code)
-  console.log("tokens:", tokens)
   oAuth2Client.setCredentials(tokens)
   // Store the token to disk for later program executions
-  console.log("TOKEN_PATH:", TOKEN_PATH)
   fs.writeFile(TOKEN_PATH, JSON.stringify(tokens), (err) => {
-    console.log("JSON.stringify(tokens:", JSON.stringify(tokens))
     if (err) return console.error(err);
-    console.log('Token stored to', TOKEN_PATH);
   });
 }
 
@@ -88,7 +79,6 @@ boot(app, __dirname, function(err) {
 
   // this middleware is invoked in the "routes" phase
   app.get('/authenticate', function(req, res, next) {
-    console.log("hit /auth")
     // Check if we have previously stored a token.
     fs.readFile(TOKEN_PATH, (err, token) => {
       //if err is thrown, redirect users to the Google auth URL
@@ -96,10 +86,9 @@ boot(app, __dirname, function(err) {
       //otherwise have returnUser's credentials get set from saved token file
       let returnUser = new Promise((resolve, reject) => {
         resolve(oAuth2Client.setCredentials(JSON.parse(token)))
-        console.log("oAuth2Client:", oAuth2Client)
         fetch('https://www.googleapis.com/oauth2/v4/token', {
           method: 'POST',
-          headers: {'Content-Type':'application/x-www-form-urlencoded'}, // this line is important, if this content-type is not set it wont work
+          headers: {'Content-Type':'application/x-www-form-urlencoded'}, 
           body: queryString.stringify({
             client_id: oAuth2Client._clientId, 
             client_secret: oAuth2Client._clientSecret,
@@ -108,22 +97,18 @@ boot(app, __dirname, function(err) {
           })
         })
         .then(res => res.json())
-        .then(json => console.log("json from fetch:", json),
-                      oAuth2Client.setCredentials(json));
+        .then(json => oAuth2Client.setCredentials(json));
     }) 
     returnUser.then(res.redirect('http://localhost:8080'))
   })
 })
 
   app.get('/oauth2', function(req, res, next){
-    console.log("hit /oauth2")
     if (req.url.indexOf('/oauth2') > -1) return getToken()
     async function getToken(){
-      console.log("getToken hit")
       const qs = new url.URL(req.url, 'http://localhost:3000').searchParams.get('code');
       let tokenPromise = new Promise((resolve, reject) => {
         tokenExchange(qs);
-        console.log("tokenExchange hit")
         resolve(res.redirect('http://localhost:8080'))
       })
       let redirect = await tokenPromise 
@@ -136,35 +121,40 @@ boot(app, __dirname, function(err) {
       body += data;
 
       // Too much POST data, kill the connection!
-      // 1e6 === 1 * Math.pow(10, 6) === 1 * 1000000 ~~~ 1MB
       if (body.length > 1e6)
           req.connection.destroy();
     });
 
     req.on('end', function() {
         var post = qs.parse(body);
-        console.log("******* oAuth2Client end ***:", oAuth2Client);
 
         const calendar = google.calendar('v3');
-        console.log("########### oAuth2Client here ######### :", oAuth2Client)
         calendar.events.get({
           auth: oAuth2Client,
-          calendarId: "dangbrotherpizza@gmail.com",
+          calendarId: "dwjohnston93@gmail.com",
           eventId: post.eventID
         }, (err, res) => {
           if (err) return console.log(`The API returned an error: ${err}`)
-          console.log("res:", res)
+          let eventData = res.data;
+          console.log("eventData:", eventData)
+          fetch('http://localhost:8080/packout/confirm', {
+            method: 'POST',
+            headers: {'Content-Type':'application/x-www-form-urlencoded'}, // this line is important, if this content-type is not set it wont work
+            body: queryString.stringify({
+              data: eventData
+            })
+          })
+          // .then(res => {
+          //   res.json()
+          //   console.log("res:", res)})
+          .then(req => req.text())
+          .then(text => console.log("****text:****", text))
+            .catch(err => {
+            console.log("err right here****:", err)
+            return ReE(res, err.message, 500)
+          })
         })
-
-        // fetch(`https://www.googleapis.com/calendar/v3/calendars/dangbrotherpizza@gmail.com/events/${post.eventID}`, {
-        //   method: "get",
-        //   headers: {
-        //     Authorization: oAuth2Client.credentials.access_token
-        //   }
-        // })
-        //   .then(res => res.json())
-        //   .then(json => console.log("json.e.es:", json.error.errors));
-
+        res.redirect("http://localhost:8080/packout-confirm")
     });
   })
 
